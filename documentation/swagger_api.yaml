@@ -1,0 +1,396 @@
+openapi: 3.0.2
+info:
+  description: API de traitement de news
+  version: 1.0.0
+  title: Bert clustering
+paths:
+  /preprocessing/category:
+    post:
+      tags:
+        - Preprocessing
+      summary: Catégorise un article
+      description: |
+        
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TitleRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentenceClassificationResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+  /preprocessing/pos_tag:
+    post:
+      tags:
+        - Preprocessing
+      summary: Part of speech tagging
+      description: |
+        
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TitleRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenClassificationResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+  /preprocessing/ner:
+    post:
+      tags:
+        - Preprocessing
+      summary: Extraits les entités d'un titre d'article
+      description: |
+        Détecte les entités de type :
+        - ORG (organisation => entreprise)
+        - LOC (location => ville / pays / lieux)
+        - PER (personne)
+        - MISC (miscellaneous => autre entités)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TitleRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenClassificationResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+
+  /articles:
+    get:
+      tags:
+        - Articles
+      summary: Liste des articles enregistré entre deux dates
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+  /article/{article_id}:
+    delete:
+      tags:
+        - Articles
+      summary: Supprime un article
+      description: |
+        Supprime l'article de la base, pas de l'algorithme.
+      parameters:
+        - in: path
+          name: article_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+    get:
+      tags:
+        - Articles
+      summary: Détails d'un article
+      parameters:
+        - in: path
+          name: article_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+  /article/move:
+    post:
+      tags:
+        - Articles
+      summary: Déplace un article d'un cluster manuellement
+      description: ""
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveArticleRequest'
+      responses:
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+
+  /clustering:
+    get:
+      tags:
+        - Clustering
+      summary: Liste des clusters
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cluster'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+    post:
+      tags:
+        - Clustering
+      summary: Créer un article et le place dans un cluster
+      description: |
+        Si un cluster correspondant au sujet est trouvé, alors l'article est ajouté a ce cluster.
+        Sinon, l'article essaie de trouver des correspondances dans la liste des outliers afin de créer un cluster.
+        Si jamais il ne trouve aucun article sur le même sujet il devient lui-même un outlier.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TitleRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cluster'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
+
+components:
+  schemas:
+    Cluster:
+      properties:
+        id:
+          type: string
+        articles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Article'
+        entities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entity'
+        creation_timestamp:
+          type: string
+        last_update_timestamp:
+          type: string
+        average_timestamp:
+          type: string
+    Entity:
+      properties:
+        information:
+          type: string
+        count:
+          type: number
+    Article:
+      properties:
+        id:
+          type: string
+          format: uuid  
+        raw:
+          type: string
+          description: title
+        token:
+          type: string
+          description: CLS token of tokenizer
+        created_at:
+          type: string
+          format: time
+        entities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entity'
+    ArticleResponse:
+      properties:
+        raw:
+          type: string
+          description: title
+        created_at:
+          type: string
+          format: time
+        entities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entity'
+    MoveArticleRequest:
+      properties:
+        cluster_from:
+          type: string
+          format: uuid
+        cluster_to:
+          type: string
+          format: uuid
+        article_id:
+          type: string
+          format: uuid
+    TitleRequest:
+      properties:
+        expirationMonth:
+          type: string
+        expirationYear:
+          type: string
+        bin:
+          type: string
+        cardType:
+          type: string
+        lastFour:
+          type: string
+        lastTwo:
+          type: string
+    TokenClassification:
+      type: object
+      properties:
+        end:
+          type: number
+        start:
+          type: number
+        label:
+          type: string
+        token:
+          type: string
+    TokenClassificationResponse:
+      type: object
+      properties:
+        title:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TokenClassification'
+    SentenceClassificationResponse:
+      type: object
+      properties:
+        category:
+          type: string
+          description: Catégorie principale de l'article
+        results:
+          type: object
+          properties:
+            culture:
+              type: number
+              format: float
+            france:
+              type: number
+              format: float
+            international:
+              type: number
+              format: float
+            santé:
+              type: number
+              format: float
+            science_high:
+              type: number
+              format: float
+            sports:
+              type: number
+              format: float
+            économie:
+              type: number
+              format: float
+    EmptyResponse:
+      type: object
+    Status:
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                $ref: '#/components/schemas/Status'
+              data:
+                type: object
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                $ref: '#/components/schemas/Status'
+              data:
+                type: object
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                $ref: '#/components/schemas/Status'
+              data:
+                type: object

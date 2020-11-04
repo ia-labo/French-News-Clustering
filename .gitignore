@@ -1,0 +1,10 @@
+.DS_Store
+__pycache__/
+
+dataset/
+models/
+logs/
+
+tools/transformer_to_spacy/
+
+.ipynb_checkpoints/
